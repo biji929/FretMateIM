@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FretMate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white dark:bg-gray-800 min-h-screen hidden md:block">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold">FretMate</h1>
+            </div>
+            <nav class="mt-6">
+                <a href="{% url 'dashboard' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Dashboard</a>
+                <a href="{% url 'logger' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Practice Logger</a>
+                <a href="{% url 'library' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Chord Library</a>
+                <a href="{% url 'tools' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Tuner & Metronome</a>
+                <a href="{% url 'settings' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Settings</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Theme Toggle Script
+        const html = document.documentElement;
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+    </script>
+</body>
+</html>

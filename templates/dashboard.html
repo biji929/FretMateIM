@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="space-y-6">
+    <h2 class="text-3xl font-bold">Dashboard</h2>
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h3 class="text-gray-500 text-sm">Total Practice Time</h3>
+            <p class="text-2xl font-bold">0 mins</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h3 class="text-gray-500 text-sm">Current Streak</h3>
+            <p class="text-2xl font-bold">0 days</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h3 class="text-gray-500 text-sm">Chords Mastered</h3>
+            <p class="text-2xl font-bold">0 / 0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h3 class="text-gray-500 text-sm">Weekly Goal</h3>
+            <p class="text-2xl font-bold">0%</p>
+        </div>
+    </div>
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <canvas id="lineChart"></canvas>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <canvas id="doughnutChart"></canvas>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctxLine = document.getElementById('lineChart').getContext('2d');
+    new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+            datasets: [{
+                label: 'Practice Minutes',
+                data: [10, 20, 30, 25, 40, 50, 45],
+                borderColor: 'rgb(59, 130, 246)',
+                tension: 0.1
+            }]
+        }
+    });
+
+    const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+    new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+            labels: ['Chords', 'Songs', 'Scales', 'Rhythm'],
+            datasets: [{
+                data: [30, 40, 20, 10],
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
+            }]
+        }
+    });
+</script>
+{% endblock %}
