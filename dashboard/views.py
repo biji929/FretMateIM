@@ -1,4 +1,7 @@
 from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from .forms import RegistrationForm
 from .forms_session import PracticeSessionForm
 from .models import PracticeSession, Chord, Tab, UserChordProgress

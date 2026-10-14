@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="space-y-6">
+    <h2 class="text-3xl font-bold">Tuner & Metronome</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Tuner Section -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded shadow">
+            <h3 class="text-xl font-bold mb-4">Guitar Tuner</h3>
+            <button id="startTuner" class="bg-blue-500 text-white px-4 py-2 rounded">Start Tuner</button>
+            <div id="tunerDisplay" class="mt-4 text-xl font-mono">Not listening</div>
+        </div>
+
+        <!-- Metronome Section -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded shadow">
+            <h3 class="text-xl font-bold mb-4">Metronome</h3>
+            <div class="flex items-center space-x-4 mb-4">
+                <label for="bpmRange">BPM: <span id="bpmVal">120</span></label>
+                <input type="range" id="bpmRange" min="40" max="220" value="120" class="w-full">
+            </div>
+            <button id="startMetronome" class="bg-green-500 text-white px-4 py-2 rounded">Start Metronome</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/tuner.js' %}"></script>
+<script src="{% static 'js/metronome.js' %}"></script>
+<script>
+    document.getElementById('startTuner').addEventListener('click', initTuner);
+
+    const metronome = new Metronome(120);
+    const bpmRange = document.getElementById('bpmRange');
+    const bpmVal = document.getElementById('bpmVal');
+
+    bpmRange.addEventListener('input', (e) => {
+        metronome.bpm = e.target.value;
+        bpmVal.innerText = e.target.value;
+    });
+
+    let metronomeRunning = false;
+    document.getElementById('startMetronome').addEventListener('click', (e) => {
+        if (!metronomeRunning) {
+            metronome.start();
+            e.target.innerText = 'Stop Metronome';
+            e.target.classList.replace('bg-green-500', 'bg-red-500');
+            metronomeRunning = true;
+        } else {
+            metronome.stop();
+            e.target.innerText = 'Start Metronome';
+            e.target.classList.replace('bg-red-500', 'bg-green-500');
+            metronomeRunning = false;
+        }
+    });
+</script>
+{% endblock %}
