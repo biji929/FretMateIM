@@ -8,7 +8,20 @@ from .models import PracticeSession, Chord, Tab, UserChordProgress
 from django.db.models import Sum, Count, Q
 from datetime import date, timedelta
 
-# ... (rest of imports)
+def register(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('dashboard')
+    else:
+        form = RegistrationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+@login_required
+def dashboard(request):
+    return render(request, 'dashboard.html')
 
 @login_required
 def logger(request):
