@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-8 rounded shadow">
+    <h2 class="text-2xl font-bold mb-6">Log Practice</h2>
+    <form id="loggerForm">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded mt-4">Save Session</button>
+    </form>
+    <div id="message" class="mt-4"></div>
+</div>
+
+<script>
+    document.getElementById('loggerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const response = await fetch('{% url "logger" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        });
+        const result = await response.json();
+        const messageDiv = document.getElementById('message');
+        if (response.ok) {
+            messageDiv.innerHTML = '<p class="text-green-500">Session saved!</p>';
+            e.target.reset();
+        } else {
+            messageDiv.innerHTML = '<p class="text-red-500">Error: ' + JSON.stringify(result.errors) + '</p>';
+        }
+    });
+</script>
+{% endblock %}
