@@ -4,7 +4,7 @@ from .models import Tab, Chord
 class SongForm(forms.ModelForm):
     class Meta:
         model = Tab
-        fields = ['title', 'artist', 'genre', 'difficulty', 'key', 'associated_chords', 'content']
+        fields = ['title', 'artist', 'genre', 'difficulty', 'key', 'youtube_url', 'audio_url', 'associated_chords', 'content']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition',
@@ -31,6 +31,16 @@ class SongForm(forms.ModelForm):
                 'placeholder': 'e.g. G, C, or Em',
                 'id': 'songKeyInput'
             }),
+            'youtube_url': forms.URLInput(attrs={
+                'class': 'w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm transition',
+                'placeholder': 'e.g. https://www.youtube.com/watch?v=bx1Bh8ZvH84',
+                'id': 'songYoutubeInput'
+            }),
+            'audio_url': forms.URLInput(attrs={
+                'class': 'w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2.5 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition',
+                'placeholder': 'e.g. https://example.com/audio/track.mp3',
+                'id': 'songAudioInput'
+            }),
             'associated_chords': forms.SelectMultiple(attrs={
                 'class': 'w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-36 transition',
                 'id': 'songChordsInput'
@@ -49,3 +59,5 @@ class SongForm(forms.ModelForm):
         self.fields['associated_chords'].queryset = Chord.objects.all().order_by('name')
         self.fields['associated_chords'].required = False
         self.fields['key'].required = False
+        self.fields['youtube_url'].required = False
+        self.fields['audio_url'].required = False

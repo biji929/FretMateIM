@@ -1,4 +1,5 @@
 import json
+import re
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -36,9 +37,27 @@ class Tab(models.Model):
     key = models.CharField(max_length=10, default='C')
     content = models.TextField()
     associated_chords = models.ManyToManyField(Chord)
+    youtube_url = models.URLField(max_length=300, blank=True, null=True, help_text="YouTube video link for backing track or lesson")
+    audio_url = models.URLField(max_length=500, blank=True, null=True, help_text="Direct link to MP3 or audio file")
 
     def __str__(self):
         return f"{self.title} by {self.artist}"
+
+    @property
+    def youtube_embed_id(self):
+        """Extract YouTube 11-character video ID from common URL formats."""
+        if not self.youtube_url:
+            return None
+        patterns = [
+            r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+            r'(?:embed\/)([0-9A-Za-z_-]{11})',
+            r'(?:youtu\.be\/)([0-9A-Za-z_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, self.youtube_url)
+            if match:
+                return match.group(1)
+        return None
 
 class PracticeSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

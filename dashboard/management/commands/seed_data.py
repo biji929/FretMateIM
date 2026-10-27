@@ -373,6 +373,8 @@ SONGS_CATALOG = [
         'genre': 'Acoustic',
         'difficulty': 'Easy',
         'key': 'G',
+        'youtube_url': 'https://www.youtube.com/watch?v=bx1Bh8ZvH84',
+        'audio_url': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
         'chords': ['E Minor', 'G Major', 'D Major', 'A Major', 'C Major'],
         'content': """Capo: 2nd Fret | Strumming: D-D-D-D-DU (Down Down Down Down Up Down Up)
 
@@ -1252,7 +1254,9 @@ class Command(BaseCommand):
                     'genre': sdata['genre'],
                     'difficulty': sdata['difficulty'],
                     'key': sdata['key'],
-                    'content': sdata['content'].strip()
+                    'content': sdata['content'].strip(),
+                    'youtube_url': sdata.get('youtube_url', ''),
+                    'audio_url': sdata.get('audio_url', ''),
                 }
             )
             # Associate real chord instances

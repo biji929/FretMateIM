@@ -80,6 +80,26 @@
                 </div>
             </div>
 
+            <!-- YouTube & MP3 Audio Links (Optional) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/60">
+                <div>
+                    <label for="{{ form.youtube_url.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-1.5">
+                        <span class="text-red-500">📺</span> YouTube Video / Lesson Link <span class="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
+                    </label>
+                    {{ form.youtube_url }}
+                    {% if form.youtube_url.errors %}<p class="text-red-500 text-xs mt-1">{{ form.youtube_url.errors.0 }}</p>{% endif %}
+                    <p class="text-[10px] text-gray-400 mt-1">Paste any standard YouTube or youtu.be URL to embed the backing track.</p>
+                </div>
+                <div>
+                    <label for="{{ form.audio_url.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5 flex items-center gap-1.5">
+                        <span class="text-emerald-500">🔊</span> MP3 Audio Track Link <span class="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
+                    </label>
+                    {{ form.audio_url }}
+                    {% if form.audio_url.errors %}<p class="text-red-500 text-xs mt-1">{{ form.audio_url.errors.0 }}</p>{% endif %}
+                    <p class="text-[10px] text-gray-400 mt-1">Direct link to an .mp3 audio file to play along.</p>
+                </div>
+            </div>
+
             <!-- Interactive Chords Picker -->
             <div>
                 <div class="flex items-center justify-between mb-1.5">
@@ -216,6 +236,16 @@
                         {% else %} bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 {% endif %}">
                         {{ song.difficulty }}
                     </span>
+                    {% if song.youtube_url %}
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center gap-1 border border-red-200 dark:border-red-800/60" title="YouTube video attached">
+                            <span>▶</span> <span>Video</span>
+                        </span>
+                    {% endif %}
+                    {% if song.audio_url %}
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/60" title="MP3 audio track attached">
+                            <span>🔊</span> <span>MP3</span>
+                        </span>
+                    {% endif %}
                     <button type="button" class="toggle-song-btn ml-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer" data-song-id="{{ song.id }}">
                         <span>🎸 Play Song</span> <span class="arrow-icon">▼</span>
                     </button>
@@ -224,7 +254,9 @@
                         data-title="{{ song.title }}"
                         data-artist="{{ song.artist }}"
                         data-key="{{ song.key }}"
-                        data-difficulty="{{ song.difficulty }}">
+                        data-difficulty="{{ song.difficulty }}"
+                        data-youtube-id="{{ song.youtube_embed_id|default:'' }}"
+                        data-audio-url="{{ song.audio_url|default:'' }}">
                         <span>🎬</span> <span>Present</span>
                     </button>
                 </div>
@@ -263,6 +295,40 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                <!-- Media Players: YouTube & MP3 Audio (if available) -->
+                {% if song.youtube_embed_id or song.audio_url %}
+                <div class="grid grid-cols-1 {% if song.youtube_embed_id and song.audio_url %}md:grid-cols-2{% endif %} gap-4">
+                    {% if song.youtube_embed_id %}
+                    <div class="bg-gray-900 rounded-2xl p-3 border border-gray-700/80 shadow-md">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <span class="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                                <span>📺</span> <span>YouTube Video / Lesson</span>
+                            </span>
+                            <a href="{{ song.youtube_url }}" target="_blank" rel="noopener" class="text-[11px] text-gray-400 hover:text-white underline">Open on YouTube ↗</a>
+                        </div>
+                        <div class="aspect-video w-full rounded-xl overflow-hidden bg-black">
+                            <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/{{ song.youtube_embed_id }}" title="{{ song.title }} video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if song.audio_url %}
+                    <div class="bg-gray-900 rounded-2xl p-4 border border-gray-700/80 shadow-md flex flex-col justify-center space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                <span>🔊</span> <span>MP3 Audio Track</span>
+                            </span>
+                            <span class="text-[11px] text-gray-400 font-mono">Play along</span>
+                        </div>
+                        <audio controls class="w-full rounded-lg" preload="none">
+                            <source src="{{ song.audio_url }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
 
                 <!-- Sheet Viewer: sticky controls + scrollable content -->
                 <div class="rounded-2xl border border-stone-800 overflow-hidden shadow-inner" style="height:520px; display:flex; flex-direction:column;">
@@ -346,6 +412,24 @@
 
     <!-- Chord Diagrams Strip -->
     <div id="presenterChordsStrip" class="flex items-center gap-4 px-6 py-3 bg-black/40 border-b border-white/10 overflow-x-auto flex-shrink-0"></div>
+
+    <!-- Media Bar (YouTube / MP3 Audio in Presenter Mode) -->
+    <div id="presenterMediaBar" class="hidden flex flex-wrap items-center justify-between px-6 py-2.5 bg-black/70 border-b border-white/10 gap-4 flex-shrink-0">
+        <div id="presenterYoutubeWrap" class="hidden flex items-center gap-3">
+            <span class="text-red-400 font-bold text-xs flex items-center gap-1.5 flex-shrink-0">
+                <span>📺</span> <span>Lesson / Video:</span>
+            </span>
+            <div class="h-32 aspect-video rounded-lg overflow-hidden bg-black shadow-lg border border-white/10">
+                <iframe id="presenterYoutubeFrame" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+        <div id="presenterAudioWrap" class="hidden flex items-center gap-3 flex-1 max-w-md">
+            <span class="text-emerald-400 font-bold text-xs flex items-center gap-1.5 flex-shrink-0">
+                <span>🔊</span> <span>MP3 Track:</span>
+            </span>
+            <audio id="presenterAudioPlayer" controls class="w-full h-8 rounded-lg"></audio>
+        </div>
+    </div>
 
     <!-- Main Sheet Area -->
     <div class="flex-1 overflow-hidden p-0 relative">
@@ -708,6 +792,11 @@
         const sp1          = document.getElementById('presenterSpeed1');
         const sp2          = document.getElementById('presenterSpeed2');
         const sp3          = document.getElementById('presenterSpeed3');
+        const mediaBar     = document.getElementById('presenterMediaBar');
+        const ytWrap       = document.getElementById('presenterYoutubeWrap');
+        const ytFrame      = document.getElementById('presenterYoutubeFrame');
+        const audioWrap    = document.getElementById('presenterAudioWrap');
+        const audioPlayer  = document.getElementById('presenterAudioPlayer');
 
         let fontSize   = 16;
         let zoomFactor = 1.0;
@@ -773,6 +862,35 @@
             scrollBtn.textContent = '▶ Auto Scroll';
             scrollBtn.classList.remove('bg-green-600');
 
+            // Handle YouTube Video & MP3 Audio in Presenter
+            const ytId = btn.dataset.youtubeId;
+            const audUrl = btn.dataset.audioUrl;
+            let hasMedia = false;
+
+            if (ytId) {
+                ytFrame.src = `https://www.youtube-nocookie.com/embed/${ytId}`;
+                ytWrap.classList.remove('hidden');
+                hasMedia = true;
+            } else {
+                ytFrame.src = '';
+                ytWrap.classList.add('hidden');
+            }
+
+            if (audUrl) {
+                audioPlayer.src = audUrl;
+                audioWrap.classList.remove('hidden');
+                hasMedia = true;
+            } else {
+                audioPlayer.src = '';
+                audioWrap.classList.add('hidden');
+            }
+
+            if (hasMedia) {
+                mediaBar.classList.remove('hidden');
+            } else {
+                mediaBar.classList.add('hidden');
+            }
+
             // Build chord diagrams strip
             chordsStrip.innerHTML = '';
             const chordsScript = document.getElementById('song-chords-' + songId);
@@ -812,6 +930,12 @@
             stopScroll();
             overlay.style.display = 'none';
             document.body.style.overflow = '';
+            // Stop playing media on exit
+            if (ytFrame) ytFrame.src = '';
+            if (audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.src = '';
+            }
             if (document.fullscreenElement) document.exitFullscreen();
         }
 
