@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from .models import PracticeSession, Chord, UserProfile
+from .models import PracticeSession, Chord, UserProfile, Tab
 from django.urls import reverse
 
 class FretMateTests(TestCase):
@@ -29,3 +29,22 @@ class FretMateTests(TestCase):
         PracticeSession.objects.create(user=user2, duration_minutes=20, focus_area='Chords')
         self.assertEqual(PracticeSession.objects.filter(user=self.user).count(), 1)
         self.assertEqual(PracticeSession.objects.filter(user=user2).count(), 1)
+
+    def test_songs_view(self):
+        response = self.client.get(reverse('songs'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'songs.html')
+
+    def test_add_song_post(self):
+        chord = Chord.objects.create(name='TestChord', genre='Rock', difficulty='Easy', diagram_data={'frets': [0, 2, 2, 0, 0, 0]})
+        response = self.client.post(reverse('songs'), {
+            'title': 'My New Song',
+            'artist': 'Awesome Band',
+            'genre': 'Rock',
+            'difficulty': 'Easy',
+            'key': 'G',
+            'associated_chords': [chord.id],
+            'content': 'G   C\nTest song lyrics'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Tab.objects.filter(title='My New Song', artist='Awesome Band').exists())

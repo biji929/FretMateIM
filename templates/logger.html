@@ -1,31 +1,223 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-8 rounded shadow">
-    <h2 class="text-2xl font-bold mb-6">Log Practice</h2>
-    <form id="loggerForm">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded mt-4">Save Session</button>
-    </form>
-    <div id="message" class="mt-4"></div>
+<div class="max-w-5xl mx-auto space-y-6">
+    <div>
+        <h2 class="text-3xl font-extrabold tracking-tight">Practice Logger</h2>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Track your daily guitar practice sessions, focus areas, and personal progress.</p>
+    </div>
+
+    <!-- Alert Message Banner -->
+    <div id="alertMessage" class="hidden rounded-lg p-4 transition-all"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <!-- ================= LOG FORM CARD ================= -->
+        <div class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <span>📝</span> Log Practice Session
+            </h3>
+
+            <form id="loggerForm" class="space-y-5">
+                {% csrf_token %}
+
+                <!-- Duration Field -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="{{ form.duration_minutes.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            Duration (Minutes) <span class="text-red-500">*</span>
+                        </label>
+                        <!-- Quick Preset Buttons -->
+                        <div class="flex gap-1 text-xs">
+                            <span class="text-gray-400 self-center mr-1">Quick:</span>
+                            <button type="button" class="preset-btn px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition" data-minutes="15">15m</button>
+                            <button type="button" class="preset-btn px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition" data-minutes="30">30m</button>
+                            <button type="button" class="preset-btn px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition" data-minutes="45">45m</button>
+                            <button type="button" class="preset-btn px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition" data-minutes="60">60m</button>
+                        </div>
+                    </div>
+                    {{ form.duration_minutes }}
+                    <span id="duration-error" class="text-xs text-red-500 hidden mt-1 block"></span>
+                </div>
+
+                <!-- Focus Area Field -->
+                <div>
+                    <label for="{{ form.focus_area.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                        Focus Area <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.focus_area }}
+                    <span id="focus-error" class="text-xs text-red-500 hidden mt-1 block"></span>
+                </div>
+
+                <!-- Notes Field -->
+                <div>
+                    <label for="{{ form.notes.id_for_label }}" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                        Notes <span class="text-xs font-normal text-gray-400 dark:text-gray-400">(Optional)</span>
+                    </label>
+                    {{ form.notes }}
+                    <span id="notes-error" class="text-xs text-red-500 hidden mt-1 block"></span>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <span>💾</span> <span id="submitBtnText">Save Practice Session</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- ================= RECENT SESSIONS SIDEBAR ================= -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-gray-200 dark:border-gray-700 flex flex-col">
+            <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span class="flex items-center gap-2"><span>🕒</span> Recent History</span>
+                <span class="text-xs font-normal text-gray-400">Last 10</span>
+            </h3>
+
+            <div id="sessionHistoryList" class="space-y-3 flex-1 overflow-y-auto max-h-[460px] pr-1">
+                {% if recent_sessions %}
+                    {% for session in recent_sessions %}
+                        <div class="session-item p-3.5 rounded-lg border border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900 transition hover:border-gray-300 dark:hover:border-gray-600">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                                    {% if session.focus_area == 'Chords' %} bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300
+                                    {% elif session.focus_area == 'Songs' %} bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300
+                                    {% elif session.focus_area == 'Scales' %} bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300
+                                    {% else %} bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 {% endif %}">
+                                    {{ session.focus_area }}
+                                </span>
+                                <span class="text-xs text-gray-400">{{ session.date|date:"M d, Y"|default:"Today" }}</span>
+                            </div>
+                            <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                                ⏱️ {{ session.duration_minutes }} minutes
+                            </div>
+                            {% if session.notes %}
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic line-clamp-2">"{{ session.notes }}"</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div id="emptyState" class="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+                        <p class="text-2xl mb-2">🎸</p>
+                        <p>No practice sessions logged yet.</p>
+                        <p class="text-xs mt-1">Fill out the form to log your first session!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    document.getElementById('loggerForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const response = await fetch('{% url "logger" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    // Quick Duration Buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const minutes = btn.dataset.minutes;
+            const durationInput = document.getElementById('id_duration_minutes');
+            if (durationInput) {
+                durationInput.value = minutes;
+                durationInput.focus();
+            }
         });
-        const result = await response.json();
-        const messageDiv = document.getElementById('message');
-        if (response.ok) {
-            messageDiv.innerHTML = '<p class="text-green-500">Session saved!</p>';
-            e.target.reset();
-        } else {
-            messageDiv.innerHTML = '<p class="text-red-500">Error: ' + JSON.stringify(result.errors) + '</p>';
+    });
+
+    // Color mapper for focus areas
+    function getFocusBadgeClass(focus) {
+        switch (focus) {
+            case 'Chords': return 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300';
+            case 'Songs': return 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300';
+            case 'Scales': return 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300';
+            default: return 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300';
+        }
+    }
+
+    // Form submission via AJAX
+    const form = document.getElementById('loggerForm');
+    const alertBox = document.getElementById('alertMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const historyList = document.getElementById('sessionHistoryList');
+    const emptyState = document.getElementById('emptyState');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Clear previous errors
+        document.querySelectorAll('[id$="-error"]').forEach(el => {
+            el.innerText = '';
+            el.classList.add('hidden');
+        });
+
+        submitBtn.disabled = true;
+        submitBtnText.innerText = 'Saving...';
+
+        try {
+            const formData = new FormData(form);
+            const response = await fetch('{% url "logger" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // Show clean success alert
+                alertBox.className = 'rounded-lg p-4 bg-green-50 dark:bg-green-950/60 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 flex items-center justify-between text-sm font-medium';
+                alertBox.innerHTML = `<span>✓ Practice session logged successfully! (${formData.get('duration_minutes')}m of ${formData.get('focus_area')})</span>`;
+                alertBox.classList.remove('hidden');
+
+                // Prepend new item to recent list
+                if (result.session) {
+                    if (emptyState) {
+                        emptyState.remove();
+                    }
+                    const newCard = document.createElement('div');
+                    newCard.className = 'session-item p-3.5 rounded-lg border border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900 transition hover:border-gray-300 dark:hover:border-gray-600 animate-pulse';
+                    newCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${getFocusBadgeClass(result.session.focus_area)}">
+                                ${result.session.focus_area}
+                            </span>
+                            <span class="text-xs text-gray-400">${result.session.date}</span>
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                            ⏱️ ${result.session.duration_minutes} minutes
+                        </div>
+                        ${result.session.notes ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic line-clamp-2">"${result.session.notes}"</p>` : ''}
+                    `;
+                    historyList.prepend(newCard);
+                    setTimeout(() => newCard.classList.remove('animate-pulse'), 1000);
+                }
+
+                form.reset();
+
+                // Auto dismiss alert after 4 seconds
+                setTimeout(() => {
+                    alertBox.classList.add('hidden');
+                }, 4000);
+            } else {
+                // Show validation errors
+                alertBox.className = 'rounded-lg p-4 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm font-medium';
+                alertBox.innerHTML = `<span>⚠ Could not save session. Please check the inputs below.</span>`;
+                alertBox.classList.remove('hidden');
+
+                if (result.errors) {
+                    for (const [field, messages] of Object.entries(result.errors)) {
+                        const errorSpan = document.getElementById(`${field}-error`);
+                        if (errorSpan) {
+                            errorSpan.innerText = Array.isArray(messages) ? messages.join(' ') : messages;
+                            errorSpan.classList.remove('hidden');
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            alertBox.className = 'rounded-lg p-4 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm font-medium';
+            alertBox.innerHTML = `<span>⚠ An unexpected error occurred. Please try again.</span>`;
+            alertBox.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtnText.innerText = 'Save Practice Session';
         }
     });
 </script>

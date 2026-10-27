@@ -1,0 +1,971 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold tracking-tight">Song Library</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">Play, practice, or add guitar songs with chords, lyrics, and chord diagrams.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono">
+                {{ total_songs }} Songs in Library
+            </span>
+            <button id="toggleAddSongFormBtn" type="button" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition flex items-center gap-2">
+                <span id="addBtnIcon">➕</span> <span id="addBtnText">Add Song</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= ADD SONG FORM DRAWER / CARD ================= -->
+    <div id="addSongContainer" class="{% if not form.errors %}hidden{% endif %} bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-2 border-blue-500/50 dark:border-blue-500/40 space-y-6 transition-all">
+        <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div>
+                <h3 class="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <span>🎸</span> Add New Song to Library
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Enter song details, pick chords to render diagrams, and format your tab sheet.</p>
+            </div>
+            <button type="button" id="closeAddSongBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold p-1">✕</button>
+        </div>
+
+        <form method="POST" action="{% url 'songs' %}" class="space-y-5">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Title -->
+                <div>
+                    <label for="{{ form.title.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5">
+                        Song Title <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ form.title.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Artist -->
+                <div>
+                    <label for="{{ form.artist.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5">
+                        Artist / Band <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.artist }}
+                    {% if form.artist.errors %}<p class="text-red-500 text-xs mt-1">{{ form.artist.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Genre -->
+                <div>
+                    <label for="{{ form.genre.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5">
+                        Genre <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.genre }}
+                </div>
+
+                <!-- Difficulty -->
+                <div>
+                    <label for="{{ form.difficulty.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5">
+                        Difficulty
+                    </label>
+                    {{ form.difficulty }}
+                </div>
+
+                <!-- Key -->
+                <div>
+                    <label for="{{ form.key.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 mb-1.5">
+                        Key (e.g. C, G, Em, Am)
+                    </label>
+                    {{ form.key }}
+                </div>
+            </div>
+
+            <!-- Interactive Chords Picker -->
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                        Chords Used <span class="text-xs font-normal text-gray-400 lowercase">(Click chords to attach their visual diagrams)</span>
+                    </label>
+                    <span id="selectedChordsCount" class="text-xs text-blue-600 dark:text-blue-400 font-semibold">0 chords selected</span>
+                </div>
+
+                <!-- Visual clickable chord tags filterable -->
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2.5">
+                    <input type="text" id="chordPickerFilter" placeholder="Filter chords (e.g., C, Em, G, Bm)..." class="w-full px-3.5 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <div id="chordChipsContainer" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                        {% for c in all_chords %}
+                            <button type="button" class="chord-chip px-2.5 py-1 rounded-lg text-xs font-bold border transition text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:border-blue-500 cursor-pointer" data-chord-id="{{ c.id }}" data-chord-name="{{ c.name|lower }}">
+                                + {{ c.name }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Synchronized native select (hidden) -->
+                <div class="hidden">
+                    {{ form.associated_chords }}
+                </div>
+            </div>
+
+            <!-- Content / Lyrics & Tablature -->
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label for="{{ form.content.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                        Lyrics & Chords Sheet <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex gap-2 text-xs">
+                        <button type="button" id="insertVerseTemplate" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer">+ Verse Template</button>
+                        <span class="text-gray-300 dark:text-gray-600">|</span>
+                        <button type="button" id="insertChorusTemplate" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer">+ Chorus Template</button>
+                    </div>
+                </div>
+                {{ form.content }}
+                {% if form.content.errors %}<p class="text-red-500 text-xs mt-1">{{ form.content.errors.0 }}</p>{% endif %}
+                <p class="text-[11px] text-gray-400 mt-1">Tip: Place chord names directly on the line above the corresponding lyric words using spaces.</p>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <button type="button" id="cancelAddSongBtn" class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition flex items-center gap-2 cursor-pointer">
+                    <span>💾</span> <span>Save Song to Library</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow border border-gray-200 dark:border-gray-700 space-y-4">
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <!-- Search Bar -->
+            <div class="w-full md:w-96 relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 text-sm">🔍</span>
+                <input type="text" id="songSearch" placeholder="Search by song title, artist, or lyrics..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+
+            <!-- Genre Filter Pills -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">Genre:</span>
+                <a href="?{% if selected_difficulty %}difficulty={{ selected_difficulty }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-3 py-1 text-xs font-bold rounded-lg transition {% if not selected_genre %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">All</a>
+                <a href="?genre=Acoustic{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-3 py-1 text-xs font-bold rounded-lg transition {% if selected_genre == 'Acoustic' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">Acoustic</a>
+                <a href="?genre=Rock{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-3 py-1 text-xs font-bold rounded-lg transition {% if selected_genre == 'Rock' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">Rock</a>
+                <a href="?genre=Pop{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-3 py-1 text-xs font-bold rounded-lg transition {% if selected_genre == 'Pop' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">Pop</a>
+                <a href="?genre=Jazz{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-3 py-1 text-xs font-bold rounded-lg transition {% if selected_genre == 'Jazz' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600{% endif %}">Jazz</a>
+            </div>
+        </div>
+
+        <!-- Secondary Filters (Difficulty & Key) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-xs">
+            <!-- Difficulty Filter -->
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-gray-400 uppercase tracking-wider">Level:</span>
+                <a href="?{% if selected_genre %}genre={{ selected_genre }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-2.5 py-1 rounded-md {% if not selected_difficulty %}font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40{% else %}text-gray-600 dark:text-gray-300 hover:text-gray-900{% endif %}">All</a>
+                <a href="?difficulty=Easy{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-2.5 py-1 rounded-md {% if selected_difficulty == 'Easy' %}font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/40{% else %}text-gray-600 dark:text-gray-300 hover:text-gray-900{% endif %}">Easy</a>
+                <a href="?difficulty=Medium{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-2.5 py-1 rounded-md {% if selected_difficulty == 'Medium' %}font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/40{% else %}text-gray-600 dark:text-gray-300 hover:text-gray-900{% endif %}">Medium</a>
+                <a href="?difficulty=Hard{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_key %}&key={{ selected_key }}{% endif %}" class="px-2.5 py-1 rounded-md {% if selected_difficulty == 'Hard' %}font-bold text-rose-600 bg-rose-50 dark:bg-rose-900/40{% else %}text-gray-600 dark:text-gray-300 hover:text-gray-900{% endif %}">Hard</a>
+            </div>
+
+            <!-- Key Filter -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-gray-400 uppercase tracking-wider">Key:</span>
+                <a href="?{% if selected_genre %}genre={{ selected_genre }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}" class="px-2 py-0.5 rounded {% if not selected_key %}bg-gray-200 dark:bg-gray-700 font-bold{% else %}text-gray-500 hover:text-gray-900{% endif %}">Any</a>
+                {% for k in available_keys %}
+                    <a href="?key={{ k }}{% if selected_genre %}&genre={{ selected_genre }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}" class="px-2 py-0.5 rounded {% if selected_key == k %}bg-blue-600 text-white font-bold{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">{{ k }}</a>
+                {% endfor %}
+                {% if selected_genre or selected_difficulty or selected_key %}
+                    <a href="{% url 'songs' %}" class="text-blue-500 underline ml-2">Reset</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Song List Grid -->
+    <div id="songsGrid" class="space-y-4">
+        {% for song in songs %}
+        <div class="song-card bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 transition-all hover:border-blue-400 dark:hover:border-blue-500" data-title="{{ song.title|lower }}" data-artist="{{ song.artist|lower }}" data-content="{{ song.content|lower }}">
+            <!-- Hidden chord JSON for presenter -->
+            <script type="application/json" class="song-chords-data" id="song-chords-{{ song.id }}">
+                [{% for chord in song.associated_chords.all %}{"name":"{{ chord.name }}","diagram":{{ chord.diagram_json|safe }}}{% if not forloop.last %},{% endif %}{% endfor %}]
+            </script>
+            <!-- Hidden song content for presenter (json_script handles newlines safely) -->
+            {{ song.content|json_script:song.id }}
+            <!-- Card Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-2xl flex-shrink-0">
+                        🎵
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{{ song.title }}</h3>
+                        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">by {{ song.artist }}</p>
+                    </div>
+                </div>
+
+                <!-- Badges & Action -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        {{ song.genre }}
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                        Key of {{ song.key }}
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full
+                        {% if song.difficulty == 'Easy' %} bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300
+                        {% elif song.difficulty == 'Medium' %} bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300
+                        {% else %} bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 {% endif %}">
+                        {{ song.difficulty }}
+                    </span>
+                    <button type="button" class="toggle-song-btn ml-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer" data-song-id="{{ song.id }}">
+                        <span>🎸 Play Song</span> <span class="arrow-icon">▼</span>
+                    </button>
+                    <button type="button" class="present-song-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        data-song-id="{{ song.id }}"
+                        data-title="{{ song.title }}"
+                        data-artist="{{ song.artist }}"
+                        data-key="{{ song.key }}"
+                        data-difficulty="{{ song.difficulty }}">
+                        <span>🎬</span> <span>Present</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chords Preview Pill Bar -->
+            <div class="flex flex-wrap items-center gap-1.5 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">Chords Used:</span>
+                {% for chord in song.associated_chords.all %}
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-gray-100 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
+                        {{ chord.name }}
+                    </span>
+                {% empty %}
+                    <span class="text-xs text-gray-400">Standard chords</span>
+                {% endfor %}
+            </div>
+
+            <!-- Expandable Song Sheet & Chord Pictures -->
+            <div id="sheet-{{ song.id }}" class="song-sheet hidden mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                <!-- Chord Pictures Strip for This Song -->
+                <div class="bg-gray-50 dark:bg-gray-900/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🖼️</span> Chord Shapes for this song:
+                        </span>
+                        <span class="text-[11px] text-gray-400">Follow finger numbers 1, 2, 3, 4</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 overflow-x-auto py-2">
+                        {% for chord in song.associated_chords.all %}
+                        <div class="chord-card bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                            <span class="font-extrabold text-sm text-gray-900 dark:text-gray-100 mb-1">{{ chord.name }}</span>
+                            <div class="chord-diagram-container flex justify-center py-1"></div>
+                            <script type="application/json" class="chord-data">{{ chord.diagram_json|safe }}</script>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Sheet Viewer: sticky controls + scrollable content -->
+                <div class="rounded-2xl border border-stone-800 overflow-hidden shadow-inner" style="height:520px; display:flex; flex-direction:column;">
+                    <!-- Sticky Controls Bar -->
+                    <div class="sheet-controls flex flex-wrap items-center justify-between bg-gray-100 dark:bg-gray-700/80 px-3 py-2 text-xs flex-shrink-0 border-b border-gray-200 dark:border-gray-700 gap-y-1">
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="autoscroll-btn px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-600 transition flex items-center gap-1.5 cursor-pointer">
+                                <span>▶</span> <span>Auto Scroll</span>
+                            </button>
+                            <span class="text-gray-400">Speed:</span>
+                            <button type="button" class="speed-btn px-2 py-1 rounded bg-white dark:bg-gray-800 font-bold cursor-pointer" data-speed="1">1x</button>
+                            <button type="button" class="speed-btn px-2 py-1 rounded text-gray-500 hover:bg-white dark:hover:bg-gray-800 font-bold cursor-pointer" data-speed="2">2x</button>
+                            <button type="button" class="speed-btn px-2 py-1 rounded text-gray-500 hover:bg-white dark:hover:bg-gray-800 font-bold cursor-pointer" data-speed="3">3x</button>
+                        </div>
+
+                        <div class="flex items-center gap-1 font-mono">
+                            <span class="text-gray-400">Text Size:</span>
+                            <button type="button" class="font-down px-2 py-1 rounded bg-white dark:bg-gray-800 font-bold cursor-pointer">A-</button>
+                            <button type="button" class="font-up px-2 py-1 rounded bg-white dark:bg-gray-800 font-bold cursor-pointer">A+</button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Sheet Content -->
+                    <div class="sheet-content bg-stone-900 text-stone-100 p-6 font-mono text-sm leading-relaxed whitespace-pre overflow-x-auto overflow-y-auto flex-1">{{ song.content }}</div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+            <p class="text-4xl mb-3">🔍</p>
+            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100">No songs found matching your search.</h4>
+            <p class="text-sm text-gray-400 mt-1">Try searching for another song, artist, or clearing your filters.</p>
+            <a href="{% url 'songs' %}" class="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">View All Songs</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ===================== FULLSCREEN PRESENTER OVERLAY ===================== -->
+<div id="songPresenter" class="fixed inset-0 z-[9999] hidden flex-col bg-gray-950 text-white" style="display:none;">
+
+    <!-- Top HUD Bar -->
+    <div id="presenterHUD" class="flex items-center justify-between px-6 py-3 bg-black/60 backdrop-blur border-b border-white/10 flex-shrink-0">
+        <!-- Song Info -->
+        <div class="flex items-center gap-4 min-w-0">
+            <span class="text-2xl">🎸</span>
+            <div class="min-w-0">
+                <h2 id="presenterTitle" class="text-lg font-black tracking-tight leading-none truncate"></h2>
+                <p id="presenterArtist" class="text-xs text-gray-400 font-semibold mt-0.5 truncate"></p>
+            </div>
+            <span id="presenterKey" class="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-700/60 border border-indigo-500/40 text-indigo-200 ml-2"></span>
+            <span id="presenterDifficulty" class="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-700/60 border border-purple-500/40 text-purple-200"></span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-2 flex-shrink-0 text-xs font-bold">
+            <!-- Text Size -->
+            <span class="text-gray-500 mr-1">Text:</span>
+            <button id="presenterFontDown" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer">A-</button>
+            <button id="presenterFontUp"   class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer">A+</button>
+
+            <!-- Zoom -->
+            <span class="text-gray-500 mx-1">|</span>
+            <span class="text-gray-500">Zoom:</span>
+            <button id="presenterZoomOut" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer">🔍-</button>
+            <span id="presenterZoomLabel" class="px-2 text-gray-300">100%</span>
+            <button id="presenterZoomIn"  class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer">🔍+</button>
+
+            <!-- Autoscroll -->
+            <span class="text-gray-500 mx-1">|</span>
+            <button id="presenterScrollBtn" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer flex items-center gap-1.5">▶ Auto Scroll</button>
+            <button id="presenterSpeed1" class="px-2 py-1 rounded bg-white/20 text-white cursor-pointer">1x</button>
+            <button id="presenterSpeed2" class="px-2 py-1 rounded bg-white/10 text-gray-400 hover:bg-white/20 cursor-pointer">2x</button>
+            <button id="presenterSpeed3" class="px-2 py-1 rounded bg-white/10 text-gray-400 hover:bg-white/20 cursor-pointer">3x</button>
+
+            <!-- Close -->
+            <span class="text-gray-500 mx-1">|</span>
+            <button id="presenterClose" class="px-3 py-1.5 rounded-lg bg-red-700/70 hover:bg-red-600 transition cursor-pointer flex items-center gap-1.5">✕ Exit</button>
+        </div>
+    </div>
+
+    <!-- Chord Diagrams Strip -->
+    <div id="presenterChordsStrip" class="flex items-center gap-4 px-6 py-3 bg-black/40 border-b border-white/10 overflow-x-auto flex-shrink-0"></div>
+
+    <!-- Main Sheet Area -->
+    <div class="flex-1 overflow-hidden p-0 relative">
+        <div id="presenterSheetWrap" class="w-full h-full overflow-y-auto overflow-x-auto p-8"
+             style="transform-origin: top left;">
+            <pre id="presenterSheet" class="font-mono text-sm leading-relaxed whitespace-pre text-green-300 select-text"></pre>
+        </div>
+    </div>
+
+    <!-- Bottom hint -->
+    <div class="flex-shrink-0 text-center py-2 text-[11px] text-gray-600 bg-black/40 border-t border-white/5">
+        Press <kbd class="px-1.5 py-0.5 rounded bg-white/10 font-mono">ESC</kbd> or click <strong>Exit</strong> to leave presentation mode
+    </div>
+</div>
+
+<script>
+    /* =========================================================================
+       ADD SONG DRAWER & INTERACTIVE CHORD PICKER
+       ========================================================================= */
+    const toggleAddSongBtn = document.getElementById('toggleAddSongFormBtn');
+    const addSongContainer = document.getElementById('addSongContainer');
+    const closeAddSongBtn = document.getElementById('closeAddSongBtn');
+    const cancelAddSongBtn = document.getElementById('cancelAddSongBtn');
+    const addBtnIcon = document.getElementById('addBtnIcon');
+    const addBtnText = document.getElementById('addBtnText');
+    const nativeChordsSelect = document.getElementById('songChordsInput');
+    const chordChips = document.querySelectorAll('.chord-chip');
+    const selectedChordsCount = document.getElementById('selectedChordsCount');
+    const chordPickerFilter = document.getElementById('chordPickerFilter');
+
+    function toggleAddSongDrawer() {
+        const isHidden = addSongContainer.classList.contains('hidden');
+        if (isHidden) {
+            addSongContainer.classList.remove('hidden');
+            addBtnIcon.innerText = '✕';
+            addBtnText.innerText = 'Close Form';
+            toggleAddSongBtn.classList.replace('bg-blue-600', 'bg-gray-700');
+            document.getElementById('songTitleInput').focus();
+        } else {
+            addSongContainer.classList.add('hidden');
+            addBtnIcon.innerText = '➕';
+            addBtnText.innerText = 'Add Song';
+            toggleAddSongBtn.classList.replace('bg-gray-700', 'bg-blue-600');
+        }
+    }
+
+    if (toggleAddSongBtn) toggleAddSongBtn.addEventListener('click', toggleAddSongDrawer);
+    if (closeAddSongBtn) closeAddSongBtn.addEventListener('click', toggleAddSongDrawer);
+    if (cancelAddSongBtn) cancelAddSongBtn.addEventListener('click', toggleAddSongDrawer);
+
+    // Sync chord chip clicks to native multi-select
+    function updateSelectedChordsCount() {
+        let count = 0;
+        if (nativeChordsSelect) {
+            Array.from(nativeChordsSelect.options).forEach(opt => {
+                if (opt.selected) count++;
+            });
+        }
+        if (selectedChordsCount) {
+            selectedChordsCount.innerText = `${count} chord${count === 1 ? '' : 's'} selected`;
+        }
+    }
+
+    chordChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const chordId = chip.dataset.chordId;
+            let opt = null;
+            if (nativeChordsSelect) {
+                opt = Array.from(nativeChordsSelect.options).find(o => o.value === chordId);
+            }
+
+            if (opt) {
+                opt.selected = !opt.selected;
+                if (opt.selected) {
+                    chip.classList.remove('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'border-gray-300', 'dark:border-gray-600');
+                    chip.classList.add('bg-blue-600', 'text-white', 'border-blue-600', 'shadow-sm');
+                    chip.innerText = `✓ ${chip.dataset.chordName.toUpperCase()}`;
+                } else {
+                    chip.classList.remove('bg-blue-600', 'text-white', 'border-blue-600', 'shadow-sm');
+                    chip.classList.add('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'border-gray-300', 'dark:border-gray-600');
+                    chip.innerText = `+ ${chip.dataset.chordName.toUpperCase()}`;
+                }
+                updateSelectedChordsCount();
+            }
+        });
+    });
+
+    // Chord Picker live search
+    if (chordPickerFilter) {
+        chordPickerFilter.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            chordChips.forEach(chip => {
+                const name = chip.dataset.chordName || '';
+                chip.style.display = name.includes(query) ? '' : 'none';
+            });
+        });
+    }
+
+    // Template insertions into song content
+    const songContentInput = document.getElementById('songContentInput');
+    const insertVerseBtn = document.getElementById('insertVerseTemplate');
+    const insertChorusBtn = document.getElementById('insertChorusTemplate');
+
+    if (insertVerseBtn && songContentInput) {
+        insertVerseBtn.addEventListener('click', () => {
+            const template = `\n[Verse]\nC              G\nFirst line of lyrics...\nAm             F\nSecond line of lyrics...\n`;
+            songContentInput.value += template;
+            songContentInput.focus();
+        });
+    }
+
+    if (insertChorusBtn && songContentInput) {
+        insertChorusBtn.addEventListener('click', () => {
+            const template = `\n[Chorus]\nC         G\nSing the chorus lyrics here\nAm        F\nHigh energy line here\n`;
+            songContentInput.value += template;
+            songContentInput.focus();
+        });
+    }
+
+    /* =========================================================================
+       SVG CHORD PICTURE GENERATOR
+       ========================================================================= */
+    function renderChordDiagram(container, data) {
+        if (!data || !data.frets) return;
+
+        const frets = data.frets;
+        const fingers = data.fingers || [0, 0, 0, 0, 0, 0];
+        const baseFret = data.base_fret || 1;
+        const barres = data.barres || [];
+
+        const width = 130;
+        const height = 155;
+        const startX = 24;
+        const startY = 32;
+        const stringSpacing = 16;
+        const fretSpacing = 20;
+        const numFrets = 5;
+
+        const stringWidths = [2.2, 1.8, 1.5, 1.2, 1.0, 0.8];
+
+        let svg = `<svg viewBox="0 0 ${width} ${height}" class="w-28 h-34 drop-shadow-sm">`;
+
+        // Fretboard backing
+        svg += `<rect x="${startX - 2}" y="${startY}" width="${5 * stringSpacing + 4}" height="${numFrets * fretSpacing}" rx="2" class="fill-stone-100/40 dark:fill-stone-800/40" />`;
+
+        // Strings
+        for (let i = 0; i < 6; i++) {
+            const x = startX + i * stringSpacing;
+            svg += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${startY + numFrets * fretSpacing}" class="stroke-stone-400 dark:stroke-stone-500" stroke-width="${stringWidths[i]}" />`;
+        }
+
+        // Frets
+        for (let f = 0; f <= numFrets; f++) {
+            const y = startY + f * fretSpacing;
+            const isNut = (f === 0 && baseFret === 1);
+            const strokeWidth = isNut ? 5 : 1.5;
+            const strokeClass = isNut ? 'stroke-gray-900 dark:stroke-gray-100' : 'stroke-stone-300 dark:stroke-stone-600';
+            svg += `<line x1="${startX}" y1="${y}" x2="${startX + 5 * stringSpacing}" y2="${y}" class="${strokeClass}" stroke-width="${strokeWidth}" stroke-linecap="round" />`;
+        }
+
+        // Base fret indicator
+        if (baseFret > 1) {
+            svg += `<text x="${startX - 6}" y="${startY + 14}" text-anchor="end" class="fill-blue-600 dark:fill-blue-400 text-[10px] font-black font-mono">${baseFret}fr</text>`;
+        }
+
+        // Muted (X) and Open (O)
+        for (let i = 0; i < 6; i++) {
+            const x = startX + i * stringSpacing;
+            const fretVal = frets[i];
+
+            if (fretVal === -1 || fretVal === 'x') {
+                svg += `<text x="${x}" y="${startY - 6}" text-anchor="middle" class="fill-rose-500 font-black text-[11px]">✕</text>`;
+            } else if (fretVal === 0) {
+                svg += `<circle cx="${x}" cy="${startY - 9}" r="3" fill="none" stroke="currentColor" class="stroke-emerald-500" stroke-width="1.6" />`;
+            }
+        }
+
+        // Barres
+        if (barres && barres.length > 0) {
+            barres.forEach(barreFret => {
+                const relFret = barreFret - baseFret + 1;
+                if (relFret >= 1 && relFret <= numFrets) {
+                    const barreY = startY + (relFret - 0.5) * fretSpacing;
+                    let minStr = 5, maxStr = 0;
+                    for (let s = 0; s < 6; s++) {
+                        if (frets[s] === barreFret) {
+                            if (s < minStr) minStr = s;
+                            if (s > maxStr) maxStr = s;
+                        }
+                    }
+                    if (minStr < maxStr) {
+                        const x1 = startX + minStr * stringSpacing;
+                        const x2 = startX + maxStr * stringSpacing;
+                        svg += `<line x1="${x1}" y1="${barreY}" x2="${x2}" y2="${barreY}" class="stroke-blue-600 dark:stroke-blue-500" stroke-width="11" stroke-linecap="round" />`;
+                    }
+                }
+            });
+        }
+
+        // Finger placement dots
+        for (let i = 0; i < 6; i++) {
+            const fretVal = frets[i];
+            const finger = fingers[i];
+
+            if (fretVal > 0) {
+                const relFret = fretVal - baseFret + 1;
+                if (relFret >= 1 && relFret <= numFrets) {
+                    const cx = startX + i * stringSpacing;
+                    const cy = startY + (relFret - 0.5) * fretSpacing;
+
+                    svg += `<circle cx="${cx}" cy="${cy}" r="6.5" class="fill-blue-600 dark:fill-blue-500" />`;
+                    if (finger > 0) {
+                        svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" class="fill-white font-black text-[8px] pointer-events-none">${finger}</text>`;
+                    }
+                }
+            }
+        }
+
+        svg += `</svg>`;
+        container.innerHTML = svg;
+    }
+
+    function initChordDiagramsInside(parentElement) {
+        parentElement.querySelectorAll('.chord-card').forEach(card => {
+            const script = card.querySelector('.chord-data');
+            const container = card.querySelector('.chord-diagram-container');
+            if (script && container && !container.hasChildNodes()) {
+                try {
+                    const data = JSON.parse(script.textContent);
+                    renderChordDiagram(container, data);
+                } catch (e) {
+                    console.error('Error rendering chord diagram:', e);
+                }
+            }
+        });
+    }
+
+    // Toggle song sheet view
+    document.querySelectorAll('.toggle-song-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const songId = btn.dataset.songId;
+            const sheet = document.getElementById(`sheet-${songId}`);
+            const arrow = btn.querySelector('.arrow-icon');
+
+            if (sheet.classList.contains('hidden')) {
+                sheet.classList.remove('hidden');
+                arrow.innerText = '▲';
+                btn.classList.replace('bg-blue-600', 'bg-gray-800');
+                initChordDiagramsInside(sheet);
+            } else {
+                sheet.classList.add('hidden');
+                arrow.innerText = '▼';
+                btn.classList.replace('bg-gray-800', 'bg-blue-600');
+            }
+        });
+    });
+
+    // Real-time Search Filter
+    const searchInput = document.getElementById('songSearch');
+    const songCards = document.querySelectorAll('.song-card');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+
+            songCards.forEach(card => {
+                const title = card.dataset.title || '';
+                const artist = card.dataset.artist || '';
+                const content = card.dataset.content || '';
+
+                if (title.includes(query) || artist.includes(query) || content.includes(query)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Auto-Scroll implementation
+    document.querySelectorAll('.song-card').forEach(card => {
+        const autoscrollBtn = card.querySelector('.autoscroll-btn');
+        const sheetContent = card.querySelector('.sheet-content');
+        const speedButtons = card.querySelectorAll('.speed-btn');
+        const fontUp = card.querySelector('.font-up');
+        const fontDown = card.querySelector('.font-down');
+
+        if (!autoscrollBtn || !sheetContent) return;
+
+        let scrollInterval = null;
+        let speed = 1;
+        let isScrolling = false;
+        let fontSize = 14;
+
+        function startScroll() {
+            if (scrollInterval) clearInterval(scrollInterval);
+            const delay = Math.max(15, 60 / speed);
+            scrollInterval = setInterval(() => {
+                sheetContent.scrollTop += 1;
+            }, delay);
+        }
+
+        autoscrollBtn.addEventListener('click', () => {
+            isScrolling = !isScrolling;
+            if (isScrolling) {
+                autoscrollBtn.classList.add('bg-blue-600', 'text-white');
+                autoscrollBtn.querySelector('span:last-child').innerText = 'Pause Scroll';
+                startScroll();
+            } else {
+                autoscrollBtn.classList.remove('bg-blue-600', 'text-white');
+                autoscrollBtn.querySelector('span:last-child').innerText = 'Auto Scroll';
+                clearInterval(scrollInterval);
+                scrollInterval = null;
+            }
+        });
+
+        speedButtons.forEach(sBtn => {
+            sBtn.addEventListener('click', () => {
+                speed = parseInt(sBtn.dataset.speed, 10);
+                speedButtons.forEach(b => b.classList.replace('bg-blue-600', 'bg-white'));
+                speedButtons.forEach(b => b.classList.replace('text-white', 'text-gray-500'));
+                sBtn.classList.add('bg-blue-600', 'text-white');
+                if (isScrolling) startScroll();
+            });
+        });
+
+        if (fontUp) {
+            fontUp.addEventListener('click', () => {
+                fontSize = Math.min(22, fontSize + 1);
+                sheetContent.style.fontSize = `${fontSize}px`;
+            });
+        }
+        if (fontDown) {
+            fontDown.addEventListener('click', () => {
+                fontSize = Math.max(11, fontSize - 1);
+                sheetContent.style.fontSize = `${fontSize}px`;
+            });
+        }
+    });
+
+    /* =========================================================================
+       🎬 FULLSCREEN SONG PRESENTER
+       ========================================================================= */
+    (function() {
+        const overlay      = document.getElementById('songPresenter');
+        const titleEl      = document.getElementById('presenterTitle');
+        const artistEl     = document.getElementById('presenterArtist');
+        const keyEl        = document.getElementById('presenterKey');
+        const diffEl       = document.getElementById('presenterDifficulty');
+        const sheetEl      = document.getElementById('presenterSheet');
+        const sheetWrap    = document.getElementById('presenterSheetWrap');
+        const chordsStrip  = document.getElementById('presenterChordsStrip');
+        const closeBtn     = document.getElementById('presenterClose');
+        const fontUpBtn    = document.getElementById('presenterFontUp');
+        const fontDownBtn  = document.getElementById('presenterFontDown');
+        const zoomInBtn    = document.getElementById('presenterZoomIn');
+        const zoomOutBtn   = document.getElementById('presenterZoomOut');
+        const zoomLabel    = document.getElementById('presenterZoomLabel');
+        const scrollBtn    = document.getElementById('presenterScrollBtn');
+        const sp1          = document.getElementById('presenterSpeed1');
+        const sp2          = document.getElementById('presenterSpeed2');
+        const sp3          = document.getElementById('presenterSpeed3');
+
+        let fontSize   = 16;
+        let zoomFactor = 1.0;
+        let scrollInt  = null;
+        let isScrolling= false;
+        let scrollSpeed= 1;
+
+        function setZoom(z) {
+            zoomFactor = Math.min(3.0, Math.max(0.4, z));
+            sheetWrap.style.transform = `scale(${zoomFactor})`;
+            sheetWrap.style.transformOrigin = 'top left';
+            // expand the wrapper so content doesn't get clipped
+            sheetWrap.parentElement.style.width  = (100 / zoomFactor) + '%';
+            sheetWrap.parentElement.style.height = (100 / zoomFactor) + '%';
+            zoomLabel.textContent = Math.round(zoomFactor * 100) + '%';
+        }
+
+        function startScroll() {
+            if (scrollInt) clearInterval(scrollInt);
+            const delay = Math.max(15, 60 / scrollSpeed);
+            scrollInt = setInterval(() => { sheetWrap.scrollTop += 1; }, delay);
+        }
+
+        function stopScroll() {
+            clearInterval(scrollInt);
+            scrollInt = null;
+        }
+
+        function openPresenter(btn) {
+            const songId   = btn.dataset.songId;
+            const title    = btn.dataset.title;
+            const artist   = btn.dataset.artist;
+            const key      = btn.dataset.key;
+            const diff     = btn.dataset.difficulty;
+
+            // Read content from json_script tag (preserves newlines & indentation correctly)
+            let content = '';
+            const contentScript = document.getElementById(songId);
+            if (contentScript) {
+                try { content = JSON.parse(contentScript.textContent); } catch(e) { content = ''; }
+            }
+
+            // Fill text info
+            titleEl.textContent  = title;
+            artistEl.textContent = 'by ' + artist;
+            keyEl.textContent    = 'Key of ' + key;
+            diffEl.textContent   = diff;
+
+            // Color difficulty badge
+            diffEl.className = 'text-xs font-bold px-2.5 py-1 rounded-full border ';
+            if (diff === 'Easy')        diffEl.className += 'bg-emerald-700/60 border-emerald-500/40 text-emerald-200';
+            else if (diff === 'Medium') diffEl.className += 'bg-amber-700/60 border-amber-500/40 text-amber-200';
+            else                        diffEl.className += 'bg-rose-700/60 border-rose-500/40 text-rose-200';
+
+            // Fill sheet content
+            sheetEl.textContent = content;
+            sheetEl.style.fontSize = fontSize + 'px';
+
+            // Reset zoom/scroll
+            setZoom(1.0);
+            stopScroll();
+            isScrolling = false;
+            scrollBtn.textContent = '▶ Auto Scroll';
+            scrollBtn.classList.remove('bg-green-600');
+
+            // Build chord diagrams strip
+            chordsStrip.innerHTML = '';
+            const chordsScript = document.getElementById('song-chords-' + songId);
+            if (chordsScript) {
+                try {
+                    const chords = JSON.parse(chordsScript.textContent);
+                    if (chords.length === 0) {
+                        chordsStrip.innerHTML = '<span class="text-xs text-gray-500 italic">No chord diagrams attached</span>';
+                    }
+                    chords.forEach(chord => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'flex flex-col items-center bg-white/10 rounded-xl p-2 border border-white/10 flex-shrink-0';
+                        const name = document.createElement('span');
+                        name.className = 'text-xs font-extrabold text-white mb-1';
+                        name.textContent = chord.name;
+                        const diagramContainer = document.createElement('div');
+                        diagramContainer.className = 'chord-diagram-container flex justify-center';
+                        wrapper.appendChild(name);
+                        wrapper.appendChild(diagramContainer);
+                        chordsStrip.appendChild(wrapper);
+                        // Render SVG diagram
+                        if (chord.diagram) renderChordDiagramPresenter(diagramContainer, chord.diagram);
+                    });
+                } catch(e) { console.error('Chord parse error', e); }
+            }
+
+            // Show overlay
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // Request native fullscreen
+            if (overlay.requestFullscreen) overlay.requestFullscreen();
+            else if (overlay.webkitRequestFullscreen) overlay.webkitRequestFullscreen();
+        }
+
+        function closePresenter() {
+            stopScroll();
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            if (document.fullscreenElement) document.exitFullscreen();
+        }
+
+        // Chord renderer (reuse same logic as main page but adapted for dark bg)
+        function renderChordDiagramPresenter(container, data) {
+            if (!data || !data.frets) return;
+            const frets   = data.frets;
+            const fingers = data.fingers || [0,0,0,0,0,0];
+            const barre   = data.barre   || null;
+            const baseFret= data.baseFret || 1;
+            const strings = 6;
+            const fretRows= 4;
+            const cellW   = 16, cellH = 16;
+            const padL=18, padT=20, padR=8, padB=18;
+            const W = padL + cellW*(strings-1) + padR;
+            const H = padT + cellH*fretRows + padB;
+
+            const ns = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(ns,'svg');
+            svg.setAttribute('width', W); svg.setAttribute('height', H);
+            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+            const fg = '#e5e7eb', bg='transparent', dotC='#a78bfa', dotTxt='#fff', openC='#a78bfa', mutedC='#ef4444';
+
+            // Grid
+            for (let f=0; f<=fretRows; f++) {
+                const y = padT + f*cellH;
+                const line = document.createElementNS(ns,'line');
+                line.setAttribute('x1', padL); line.setAttribute('y1', y);
+                line.setAttribute('x2', padL+cellW*(strings-1)); line.setAttribute('y2', y);
+                line.setAttribute('stroke', f===0 && baseFret===1 ? '#a78bfa' : fg);
+                line.setAttribute('stroke-width', f===0 && baseFret===1 ? '3' : '1');
+                svg.appendChild(line);
+            }
+            for (let s=0; s<strings; s++) {
+                const x = padL + s*cellW;
+                const line = document.createElementNS(ns,'line');
+                line.setAttribute('x1',x); line.setAttribute('y1',padT);
+                line.setAttribute('x2',x); line.setAttribute('y2',padT+cellH*fretRows);
+                line.setAttribute('stroke', fg); line.setAttribute('stroke-width','1');
+                svg.appendChild(line);
+            }
+            // Barre
+            if (barre) {
+                const by = padT + (barre.fret-0.5)*cellH;
+                const bx1= padL + (barre.startString-1)*cellW;
+                const bx2= padL + (barre.endString-1)*cellW;
+                const bar = document.createElementNS(ns,'rect');
+                bar.setAttribute('x', bx1-4); bar.setAttribute('y', by-6);
+                bar.setAttribute('width', bx2-bx1+8); bar.setAttribute('height',12);
+                bar.setAttribute('rx','6'); bar.setAttribute('fill', dotC);
+                svg.appendChild(bar);
+            }
+            // Base fret label
+            if (baseFret > 1) {
+                const t = document.createElementNS(ns,'text');
+                t.setAttribute('x', padL-4); t.setAttribute('y', padT+cellH*0.75);
+                t.setAttribute('text-anchor','end'); t.setAttribute('font-size','8');
+                t.setAttribute('fill', fg); t.textContent = baseFret + 'fr';
+                svg.appendChild(t);
+            }
+            // Dots
+            frets.forEach((fret, si) => {
+                const x = padL + si*cellW;
+                if (fret === -1) {
+                    ['line','line'].forEach((tag,i) => {
+                        const ln = document.createElementNS(ns,'line');
+                        const dx = 4;
+                        if (i===0){ ln.setAttribute('x1',x-dx); ln.setAttribute('y1',padT-14);
+                                    ln.setAttribute('x2',x+dx); ln.setAttribute('y2',padT-6); }
+                        else      { ln.setAttribute('x1',x+dx); ln.setAttribute('y1',padT-14);
+                                    ln.setAttribute('x2',x-dx); ln.setAttribute('y2',padT-6); }
+                        ln.setAttribute('stroke',mutedC); ln.setAttribute('stroke-width','1.5');
+                        svg.appendChild(ln);
+                    });
+                } else if (fret === 0) {
+                    const c = document.createElementNS(ns,'circle');
+                    c.setAttribute('cx',x); c.setAttribute('cy',padT-10);
+                    c.setAttribute('r','4'); c.setAttribute('fill','none');
+                    c.setAttribute('stroke',openC); c.setAttribute('stroke-width','1.5');
+                    svg.appendChild(c);
+                } else {
+                    const cy = padT + (fret-0.5)*cellH;
+                    const circle = document.createElementNS(ns,'circle');
+                    circle.setAttribute('cx',x); circle.setAttribute('cy',cy);
+                    circle.setAttribute('r','6'); circle.setAttribute('fill',dotC);
+                    svg.appendChild(circle);
+                    if (fingers[si]) {
+                        const t = document.createElementNS(ns,'text');
+                        t.setAttribute('x',x); t.setAttribute('y',cy+3.5);
+                        t.setAttribute('text-anchor','middle');
+                        t.setAttribute('font-size','8'); t.setAttribute('fill',dotTxt);
+                        t.setAttribute('font-weight','bold');
+                        t.textContent = fingers[si];
+                        svg.appendChild(t);
+                    }
+                }
+            });
+            container.appendChild(svg);
+        }
+
+        // Wire up present buttons
+        document.querySelectorAll('.present-song-btn').forEach(btn => {
+            btn.addEventListener('click', () => openPresenter(btn));
+        });
+
+        // Close button & ESC
+        closeBtn.addEventListener('click', closePresenter);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && overlay.style.display !== 'none') closePresenter();
+        });
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && overlay.style.display !== 'none') closePresenter();
+        });
+
+        // Font size
+        fontUpBtn.addEventListener('click', () => {
+            fontSize = Math.min(28, fontSize + 1);
+            sheetEl.style.fontSize = fontSize + 'px';
+        });
+        fontDownBtn.addEventListener('click', () => {
+            fontSize = Math.max(10, fontSize - 1);
+            sheetEl.style.fontSize = fontSize + 'px';
+        });
+
+        // Zoom
+        zoomInBtn.addEventListener('click',  () => setZoom(zoomFactor + 0.1));
+        zoomOutBtn.addEventListener('click', () => setZoom(zoomFactor - 0.1));
+
+        // Autoscroll
+        scrollBtn.addEventListener('click', () => {
+            isScrolling = !isScrolling;
+            if (isScrolling) {
+                scrollBtn.innerHTML = '⏸ Pause Scroll';
+                scrollBtn.classList.add('bg-green-600');
+                startScroll();
+            } else {
+                scrollBtn.innerHTML = '▶ Auto Scroll';
+                scrollBtn.classList.remove('bg-green-600');
+                stopScroll();
+            }
+        });
+
+        // Speed buttons
+        [sp1, sp2, sp3].forEach((btn, i) => {
+            btn.addEventListener('click', () => {
+                scrollSpeed = i + 1;
+                [sp1, sp2, sp3].forEach(b => {
+                    b.className = 'px-2 py-1 rounded bg-white/10 text-gray-400 hover:bg-white/20 cursor-pointer text-xs font-bold';
+                });
+                btn.className = 'px-2 py-1 rounded bg-white/20 text-white cursor-pointer text-xs font-bold';
+                if (isScrolling) startScroll();
+            });
+        });
+    })();
+</script>
+{% endblock %}

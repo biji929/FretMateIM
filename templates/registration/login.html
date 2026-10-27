@@ -1,16 +1,70 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-8 rounded shadow">
-    <h2 class="text-2xl font-bold mb-6">Login</h2>
-    <form method="post">
-        {% csrf_token %}
-        {% for field in form %}
-            <div class="mb-4">
-                {{ field.label_tag }}
-                {{ field }}
-            </div>
-        {% endfor %}
-        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded">Login</button>
-    </form>
+{% extends 'auth_base.html' %}
+{% block page_title %}Login{% endblock %}
+
+{% block auth_content %}
+<h2 class="text-2xl font-black mb-1">Welcome back</h2>
+<p class="text-gray-400 text-sm mb-6">Log in to continue your practice.</p>
+
+<form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Non-field errors -->
+    {% if form.non_field_errors %}
+        <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+    {% endif %}
+
+    {% for field in form %}
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold uppercase tracking-wider text-gray-300">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <p class="text-red-400 text-xs">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <button type="submit"
+        class="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95">
+        🔐 Log In
+    </button>
+</form>
+
+<div class="relative flex items-center justify-center my-5">
+    <div class="border-t border-white/10 w-full"></div>
+    <span class="absolute bg-transparent px-3 text-xs text-gray-500">OR</span>
 </div>
+
+<form action="{% url 'guest_login' %}" method="post">
+    {% csrf_token %}
+    <button type="submit"
+        class="w-full py-2.5 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold rounded-xl transition-all active:scale-95">
+        👤 Continue as Guest
+    </button>
+</form>
+
+<p class="mt-6 text-center text-sm text-gray-500">
+    Don't have an account?
+    <a href="{% url 'register' %}" class="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2">Register here</a>
+</p>
+
+<style>
+    input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 0.75rem;
+        color: white;
+        font-size: 0.9rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    }
+    input::placeholder { color: #6b7280; }
+</style>
 {% endblock %}

@@ -1,3 +1,4 @@
+import json
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -23,10 +24,16 @@ class Chord(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def diagram_json(self):
+        return json.dumps(self.diagram_data)
+
 class Tab(models.Model):
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100)
     genre = models.CharField(max_length=20, choices=Chord.GENRES)
+    difficulty = models.CharField(max_length=20, choices=Chord.DIFFICULTIES, default='Easy')
+    key = models.CharField(max_length=10, default='C')
     content = models.TextField()
     associated_chords = models.ManyToManyField(Chord)
 

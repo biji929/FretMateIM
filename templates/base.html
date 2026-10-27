@@ -13,23 +13,50 @@
     </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
-    <div class="flex">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-white dark:bg-gray-800 min-h-screen hidden md:block">
-            <div class="p-6">
-                <h1 class="text-2xl font-bold">FretMate</h1>
-            </div>
-            <nav class="mt-6">
-                <a href="{% url 'dashboard' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Dashboard</a>
-                <a href="{% url 'logger' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Practice Logger</a>
-                <a href="{% url 'library' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Chord Library</a>
-                <a href="{% url 'tools' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Tuner & Metronome</a>
-                <a href="{% url 'settings' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700">Settings</a>
-            </nav>
-        </aside>
+    {% if user.is_authenticated and user.username|slice:":6" == "guest_" %}
+        <div class="bg-yellow-600 text-white p-2.5 text-center text-sm font-medium shadow-sm fixed top-0 left-0 right-0 z-50">
+            You're using a guest account. <a href="{% url 'register' %}" class="underline font-bold hover:text-yellow-100">Register to save your progress.</a>
+        </div>
+    {% endif %}
 
-        <!-- Main Content -->
-        <main class="flex-1 p-8">
+    <div class="flex min-h-screen">
+        {% if user.is_authenticated %}
+            <!-- Sidebar: fixed to viewport, never scrolls -->
+            <aside class="w-56 bg-white dark:bg-gray-800 fixed top-0 left-0 h-screen hidden md:flex flex-col border-r border-gray-200 dark:border-gray-700 z-40 overflow-y-auto">
+                <div class="p-6 flex-shrink-0">
+                    <h1 class="text-2xl font-bold">FretMate</h1>
+                </div>
+                <nav class="mt-2 flex-1">
+                    <a href="{% url 'dashboard' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Dashboard</a>
+                    <a href="{% url 'logger' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'logger' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Practice Logger</a>
+                    <a href="{% url 'library' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'library' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Chord Library</a>
+                    <a href="{% url 'songs' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'songs' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Song Library</a>
+                    <a href="{% url 'tools' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'tools' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Tuner & Metronome</a>
+                    <a href="{% url 'settings' %}" class="block py-2.5 px-4 hover:bg-gray-200 dark:hover:bg-gray-700 {% if request.resolver_match.url_name == 'settings' %}bg-gray-200 dark:bg-gray-700 font-semibold{% endif %}">Settings</a>
+                </nav>
+            </aside>
+        {% endif %}
+
+        <!-- Main Content: offset by sidebar width so it doesn't hide under it -->
+        <main class="flex-1 p-8 {% if user.is_authenticated %}md:ml-56{% endif %}">
+            {% if messages %}
+                <div class="max-w-7xl mx-auto space-y-3 mb-6">
+                    {% for message in messages %}
+                        <div class="p-4 rounded-xl text-sm font-semibold border flex items-center justify-between shadow-sm transition-all
+                            {% if message.tags == 'success' %} bg-green-50 dark:bg-green-950/60 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200
+                            {% elif message.tags == 'error' %} bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200
+                            {% else %} bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 {% endif %}">
+                            <span class="flex items-center gap-2">
+                                {% if message.tags == 'success' %}<span>✓</span>
+                                {% elif message.tags == 'error' %}<span>⚠</span>
+                                {% else %}<span>ℹ</span>{% endif %}
+                                {{ message }}
+                            </span>
+                            <button type="button" onclick="this.parentElement.remove()" class="text-xs opacity-60 hover:opacity-100 font-bold px-2 py-0.5">✕</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>

@@ -1,55 +1,390 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="space-y-6">
-    <h2 class="text-3xl font-bold">Tuner & Metronome</h2>
+{% load static %}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Tuner Section -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded shadow">
-            <h3 class="text-xl font-bold mb-4">Guitar Tuner</h3>
-            <button id="startTuner" class="bg-blue-500 text-white px-4 py-2 rounded">Start Tuner</button>
-            <div id="tunerDisplay" class="mt-4 text-xl font-mono">Not listening</div>
+{% block content %}
+<div class="space-y-6 max-w-6xl mx-auto">
+    <div>
+        <h2 class="text-3xl font-extrabold tracking-tight">Practice Tools</h2>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Real-time pitch detection tuner and sample-accurate metronome running directly in your browser.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- ================= GUITAR TUNER SECTION ================= -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span>🎸</span> Guitar Tuner
+                    </h3>
+                    <span id="tunerStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">
+                        Inactive
+                    </span>
+                </div>
+
+                <!-- Standard Guitar Strings Quick Indicators -->
+                <div class="grid grid-cols-6 gap-2 mb-6">
+                    <div id="string-E2" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">6th</div>
+                        <div class="font-bold text-sm">E₂</div>
+                    </div>
+                    <div id="string-A2" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">5th</div>
+                        <div class="font-bold text-sm">A₂</div>
+                    </div>
+                    <div id="string-D3" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">4th</div>
+                        <div class="font-bold text-sm">D₃</div>
+                    </div>
+                    <div id="string-G3" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">3rd</div>
+                        <div class="font-bold text-sm">G₃</div>
+                    </div>
+                    <div id="string-B3" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">2nd</div>
+                        <div class="font-bold text-sm">B₃</div>
+                    </div>
+                    <div id="string-E4" class="string-badge text-center py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 transition-all">
+                        <div class="text-xs text-gray-400">1st</div>
+                        <div class="font-bold text-sm">E₄</div>
+                    </div>
+                </div>
+
+                <!-- Tuner Visualizer Display -->
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700 mb-6 relative overflow-hidden">
+                    <!-- Note & Octave Display -->
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="noteName" class="text-7xl font-black font-mono tracking-tight text-gray-400 dark:text-gray-500 transition-colors">--</span>
+                        <span id="octaveNum" class="text-2xl font-bold font-mono text-gray-400 dark:text-gray-500"></span>
+                    </div>
+
+                    <!-- Guidance / Status Message -->
+                    <div id="tuningAdvice" class="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400 h-5">
+                        Click "Start Tuner" to enable microphone
+                    </div>
+
+                    <!-- Cents Gauge / Meter -->
+                    <div class="mt-6 px-2">
+                        <div class="relative h-6 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden flex items-center">
+                            <!-- In-tune center zone -->
+                            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 bg-green-500/20 border-x border-green-500/40"></div>
+                            <!-- Center target tick -->
+                            <div class="absolute left-1/2 -translate-x-1/2 w-0.5 h-full bg-green-600 dark:bg-green-400 z-10"></div>
+                            <!-- Moving needle -->
+                            <div id="centsNeedle" class="absolute top-1 bottom-1 w-2 rounded-full bg-blue-600 dark:bg-blue-400 transition-all duration-75 shadow-sm" style="left: 50%; transform: translateX(-50%); opacity: 0;"></div>
+                        </div>
+                        <div class="flex justify-between text-xs font-mono text-gray-400 mt-1">
+                            <span>-50¢ (Flat)</span>
+                            <span id="centsValue" class="font-bold text-gray-600 dark:text-gray-300">0¢</span>
+                            <span>+50¢ (Sharp)</span>
+                        </div>
+                    </div>
+
+                    <!-- Frequency Details -->
+                    <div class="mt-4 flex justify-center gap-6 text-xs font-mono text-gray-500 dark:text-gray-400">
+                        <div>Frequency: <span id="currentFreq" class="font-bold text-gray-800 dark:text-gray-200">--</span> Hz</div>
+                        <div>Target: <span id="targetFreq" class="font-bold text-gray-800 dark:text-gray-200">--</span> Hz</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tuner Action Button -->
+            <button id="startTuner" class="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow">
+                <span>🎤</span> <span id="tunerBtnText">Start Tuner</span>
+            </button>
         </div>
 
-        <!-- Metronome Section -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded shadow">
-            <h3 class="text-xl font-bold mb-4">Metronome</h3>
-            <div class="flex items-center space-x-4 mb-4">
-                <label for="bpmRange">BPM: <span id="bpmVal">120</span></label>
-                <input type="range" id="bpmRange" min="40" max="220" value="120" class="w-full">
+        <!-- ================= METRONOME SECTION ================= -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span>⏱️</span> Metronome
+                    </h3>
+                    <!-- Time Signature Select -->
+                    <div class="flex items-center gap-1 text-sm">
+                        <label for="timeSigSelect" class="text-xs text-gray-500 dark:text-gray-400 font-medium">Time:</label>
+                        <select id="timeSigSelect" class="bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-sm font-semibold">
+                            <option value="2">2/4</option>
+                            <option value="3">3/4</option>
+                            <option value="4" selected>4/4</option>
+                            <option value="6">6/8</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tempo Display & Beat Dots -->
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700 mb-6">
+                    <div class="flex items-baseline justify-center gap-2">
+                        <span id="bpmVal" class="text-6xl font-black font-mono tracking-tight text-gray-900 dark:text-gray-100">120</span>
+                        <span class="text-xl font-bold text-gray-400 uppercase">BPM</span>
+                    </div>
+                    <div id="tempoName" class="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1">
+                        Moderato
+                    </div>
+
+                    <!-- Beat Visualizer Dots -->
+                    <div id="beatIndicators" class="flex justify-center items-center gap-3 mt-6">
+                        <!-- Populated dynamically based on time signature -->
+                    </div>
+                </div>
+
+                <!-- BPM Slider & Step Buttons -->
+                <div class="space-y-4 mb-6">
+                    <div class="flex items-center gap-4">
+                        <input type="range" id="bpmRange" min="40" max="220" value="120" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Quick BPM Adjustments & Tap Tempo -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex gap-1.5">
+                            <button type="button" class="bpm-btn px-2.5 py-1 text-xs font-semibold rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition" data-step="-5">-5</button>
+                            <button type="button" class="bpm-btn px-2.5 py-1 text-xs font-semibold rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition" data-step="-1">-1</button>
+                            <button type="button" class="bpm-btn px-2.5 py-1 text-xs font-semibold rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition" data-step="1">+1</button>
+                            <button type="button" class="bpm-btn px-2.5 py-1 text-xs font-semibold rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition" data-step="5">+5</button>
+                        </div>
+                        <button id="tapTempoBtn" type="button" class="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-300">
+                            🥁 Tap Tempo
+                        </button>
+                    </div>
+                </div>
             </div>
-            <button id="startMetronome" class="bg-green-500 text-white px-4 py-2 rounded">Start Metronome</button>
+
+            <!-- Metronome Action Button -->
+            <button id="startMetronome" class="w-full py-3 px-4 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition flex items-center justify-center gap-2 shadow">
+                <span>▶</span> <span id="metronomeBtnText">Start Metronome</span>
+            </button>
         </div>
     </div>
 </div>
 
 <script src="{% static 'js/tuner.js' %}"></script>
 <script src="{% static 'js/metronome.js' %}"></script>
+
 <script>
-    document.getElementById('startTuner').addEventListener('click', initTuner);
+    /* =========================================================================
+       TUNER INITIALIZATION & UI BINDINGS
+       ========================================================================= */
+    const tuner = new GuitarTuner();
+    const startTunerBtn = document.getElementById('startTuner');
+    const tunerBtnText = document.getElementById('tunerBtnText');
+    const tunerStatusBadge = document.getElementById('tunerStatusBadge');
+    const noteNameEl = document.getElementById('noteName');
+    const octaveNumEl = document.getElementById('octaveNum');
+    const tuningAdviceEl = document.getElementById('tuningAdvice');
+    const centsNeedle = document.getElementById('centsNeedle');
+    const centsValue = document.getElementById('centsValue');
+    const currentFreqEl = document.getElementById('currentFreq');
+    const targetFreqEl = document.getElementById('targetFreq');
+    const stringBadges = document.querySelectorAll('.string-badge');
 
-    const metronome = new Metronome(120);
-    const bpmRange = document.getElementById('bpmRange');
-    const bpmVal = document.getElementById('bpmVal');
+    // Tempo Italian terms lookup
+    function getTempoName(bpm) {
+        if (bpm < 60) return 'Largo (Broad & Slow)';
+        if (bpm < 76) return 'Adagio (Slow & Stately)';
+        if (bpm < 108) return 'Andante (Walking Pace)';
+        if (bpm < 120) return 'Moderato (Moderate)';
+        if (bpm < 168) return 'Allegro (Fast & Bright)';
+        if (bpm < 200) return 'Vivace (Lively)';
+        return 'Presto (Very Fast)';
+    }
 
-    bpmRange.addEventListener('input', (e) => {
-        metronome.bpm = e.target.value;
-        bpmVal.innerText = e.target.value;
+    // Reset Tuner UI to idle state
+    function resetTunerDisplay() {
+        noteNameEl.innerText = '--';
+        noteNameEl.className = 'text-7xl font-black font-mono tracking-tight text-gray-400 dark:text-gray-500 transition-colors';
+        octaveNumEl.innerText = '';
+        tuningAdviceEl.innerText = tuner.isListening ? 'Listening... Pluck a string' : 'Tuner is stopped';
+        tuningAdviceEl.className = 'mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400 h-5';
+        centsNeedle.style.opacity = '0';
+        centsValue.innerText = '0¢';
+        centsValue.className = 'font-bold text-gray-600 dark:text-gray-300';
+        currentFreqEl.innerText = '--';
+        targetFreqEl.innerText = '--';
+        stringBadges.forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-950/40'));
+    }
+
+    tuner.onSilent = () => {
+        if (tuner.isListening) {
+            tuningAdviceEl.innerText = 'Listening... Pluck a string';
+            centsNeedle.style.opacity = '0.3';
+        }
+    };
+
+    tuner.onNoteDetected = (data) => {
+        noteNameEl.innerText = data.note;
+        octaveNumEl.innerText = data.octave;
+        currentFreqEl.innerText = data.frequency.toFixed(1);
+        targetFreqEl.innerText = data.targetFreq.toFixed(1);
+
+        // Position needle (-50 to +50 cents mapped to 5% to 95%)
+        const clampedCents = Math.max(-50, Math.min(50, data.cents));
+        const percent = 50 + (clampedCents / 50) * 45;
+        centsNeedle.style.left = `${percent}%`;
+        centsNeedle.style.opacity = '1';
+        centsValue.innerText = `${data.cents > 0 ? '+' : ''}${data.cents}¢`;
+
+        // Highlight matching string if detected
+        stringBadges.forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-950/40'));
+        if (data.matchingString) {
+            const activeBadge = document.getElementById(`string-${data.matchingString.name}`);
+            if (activeBadge) {
+                activeBadge.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-950/40');
+            }
+        }
+
+        // Color and guidance based on tuning precision
+        if (data.inTune) {
+            noteNameEl.className = 'text-7xl font-black font-mono tracking-tight text-green-500 transition-colors';
+            centsNeedle.className = 'absolute top-1 bottom-1 w-2 rounded-full bg-green-500 shadow-sm';
+            tuningAdviceEl.innerText = '✓ Perfect! In Tune';
+            tuningAdviceEl.className = 'mt-2 text-sm font-semibold text-green-600 dark:text-green-400 h-5';
+            centsValue.className = 'font-bold text-green-600 dark:text-green-400';
+        } else if (data.cents < 0) {
+            noteNameEl.className = 'text-7xl font-black font-mono tracking-tight text-amber-500 transition-colors';
+            centsNeedle.className = 'absolute top-1 bottom-1 w-2 rounded-full bg-amber-500 shadow-sm';
+            tuningAdviceEl.innerText = '▲ Too Low (Tune Up)';
+            tuningAdviceEl.className = 'mt-2 text-sm font-semibold text-amber-600 dark:text-amber-400 h-5';
+            centsValue.className = 'font-bold text-amber-600 dark:text-amber-400';
+        } else {
+            noteNameEl.className = 'text-7xl font-black font-mono tracking-tight text-red-500 transition-colors';
+            centsNeedle.className = 'absolute top-1 bottom-1 w-2 rounded-full bg-red-500 shadow-sm';
+            tuningAdviceEl.innerText = '▼ Too High (Tune Down)';
+            tuningAdviceEl.className = 'mt-2 text-sm font-semibold text-red-600 dark:text-red-400 h-5';
+            centsValue.className = 'font-bold text-red-600 dark:text-red-400';
+        }
+    };
+
+    startTunerBtn.addEventListener('click', async () => {
+        if (!tuner.isListening) {
+            try {
+                await tuner.start();
+                startTunerBtn.classList.replace('bg-blue-600', 'bg-gray-600');
+                startTunerBtn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-700');
+                tunerBtnText.innerText = 'Stop Tuner';
+                tunerStatusBadge.innerText = 'Listening';
+                tunerStatusBadge.className = 'text-xs px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/60 text-green-700 dark:text-green-300 font-semibold animate-pulse';
+                tuningAdviceEl.innerText = 'Listening... Pluck a string';
+            } catch (err) {
+                alert('Microphone access denied or unavailable. Please grant microphone permissions in your browser.');
+            }
+        } else {
+            tuner.stop();
+            startTunerBtn.classList.replace('bg-gray-600', 'bg-blue-600');
+            startTunerBtn.classList.replace('hover:bg-gray-700', 'hover:bg-blue-700');
+            tunerBtnText.innerText = 'Start Tuner';
+            tunerStatusBadge.innerText = 'Inactive';
+            tunerStatusBadge.className = 'text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium';
+            resetTunerDisplay();
+        }
     });
 
-    let metronomeRunning = false;
-    document.getElementById('startMetronome').addEventListener('click', (e) => {
-        if (!metronomeRunning) {
+    /* =========================================================================
+       METRONOME INITIALIZATION & UI BINDINGS
+       ========================================================================= */
+    const metronome = new Metronome(120, 4);
+    const startMetronomeBtn = document.getElementById('startMetronome');
+    const metronomeBtnText = document.getElementById('metronomeBtnText');
+    const bpmRange = document.getElementById('bpmRange');
+    const bpmVal = document.getElementById('bpmVal');
+    const tempoNameEl = document.getElementById('tempoName');
+    const timeSigSelect = document.getElementById('timeSigSelect');
+    const beatIndicators = document.getElementById('beatIndicators');
+    const tapTempoBtn = document.getElementById('tapTempoBtn');
+
+    // Build visual beat dots
+    function renderBeatDots(beats) {
+        beatIndicators.innerHTML = '';
+        for (let i = 0; i < beats; i++) {
+            const dot = document.createElement('div');
+            dot.id = `beat-dot-${i}`;
+            dot.className = 'w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-75';
+            beatIndicators.appendChild(dot);
+        }
+    }
+    renderBeatDots(4);
+
+    // Audio beat callback syncs UI flash
+    metronome.onBeat = (beatNumber, isAccent) => {
+        const dots = beatIndicators.querySelectorAll('div');
+        dots.forEach((dot, idx) => {
+            if (idx === beatNumber) {
+                if (isAccent) {
+                    dot.className = 'w-5 h-5 rounded-full bg-blue-500 scale-125 shadow-md shadow-blue-500/50 transition-all duration-75';
+                } else {
+                    dot.className = 'w-4 h-4 rounded-full bg-green-500 scale-110 shadow-sm shadow-green-500/50 transition-all duration-75';
+                }
+            } else {
+                dot.className = 'w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-150';
+            }
+        });
+    };
+
+    function updateBpm(newBpm) {
+        const clamped = Math.max(40, Math.min(240, parseInt(newBpm, 10)));
+        metronome.setBpm(clamped);
+        bpmRange.value = clamped;
+        bpmVal.innerText = clamped;
+        tempoNameEl.innerText = getTempoName(clamped);
+    }
+
+    bpmRange.addEventListener('input', (e) => updateBpm(e.target.value));
+
+    // Step adjustment buttons (+1, -1, +5, -5)
+    document.querySelectorAll('.bpm-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const step = parseInt(btn.dataset.step, 10);
+            updateBpm(metronome.bpm + step);
+        });
+    });
+
+    // Time signature changes
+    timeSigSelect.addEventListener('change', (e) => {
+        const beats = parseInt(e.target.value, 10);
+        metronome.setBeatsPerMeasure(beats);
+        renderBeatDots(beats);
+    });
+
+    // Start / Stop Toggle
+    startMetronomeBtn.addEventListener('click', () => {
+        if (!metronome.isPlaying) {
             metronome.start();
-            e.target.innerText = 'Stop Metronome';
-            e.target.classList.replace('bg-green-500', 'bg-red-500');
-            metronomeRunning = true;
+            startMetronomeBtn.classList.replace('bg-green-600', 'bg-red-600');
+            startMetronomeBtn.classList.replace('hover:bg-green-700', 'hover:bg-red-700');
+            metronomeBtnText.innerText = 'Stop Metronome';
         } else {
             metronome.stop();
-            e.target.innerText = 'Start Metronome';
-            e.target.classList.replace('bg-red-500', 'bg-green-500');
-            metronomeRunning = false;
+            startMetronomeBtn.classList.replace('bg-red-600', 'bg-green-600');
+            startMetronomeBtn.classList.replace('hover:bg-red-700', 'hover:bg-green-700');
+            metronomeBtnText.innerText = 'Start Metronome';
+            // Reset beat dots
+            const dots = beatIndicators.querySelectorAll('div');
+            dots.forEach(d => d.className = 'w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-75');
         }
+    });
+
+    // Tap Tempo Feature
+    let tapTimes = [];
+    tapTempoBtn.addEventListener('click', () => {
+        const now = performance.now();
+        // Clear taps if more than 2.5s since last tap
+        if (tapTimes.length > 0 && (now - tapTimes[tapTimes.length - 1]) > 2500) {
+            tapTimes = [];
+        }
+        tapTimes.push(now);
+        if (tapTimes.length > 5) tapTimes.shift();
+
+        if (tapTimes.length >= 2) {
+            const intervals = [];
+            for (let i = 1; i < tapTimes.length; i++) {
+                intervals.push(tapTimes[i] - tapTimes[i - 1]);
+            }
+            const avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
+            const calculatedBpm = Math.round(60000 / avgInterval);
+            updateBpm(calculatedBpm);
+        }
+
+        tapTempoBtn.classList.add('bg-blue-100', 'dark:bg-blue-900');
+        setTimeout(() => tapTempoBtn.classList.remove('bg-blue-100', 'dark:bg-blue-900'), 150);
     });
 </script>
 {% endblock %}
